@@ -1,8 +1,6 @@
 // Ce fichier traduit un code assembleur passé en ligne de commande en un code machine
 
-// TODO : Error handling (look for the line : index of the current line), Flags
-// TODO : Clean string before doing checks
-// TODO : Free all
+// TODO : Free all VALGRIND
 
 
 #include <stdio.h>
@@ -17,6 +15,11 @@ typedef struct {
 } Dict;
 
 typedef struct {
+    char *name;
+    int adress_line;
+} Flag;
+
+typedef struct {
     char *flag;
     char *operation;
     char *data;
@@ -24,7 +27,8 @@ typedef struct {
 
 
 char* get_code(const char *operation);
-void convert_line(const char *input, Instruction*);
+void convert_line(const char *input, Instruction *line);
+int isFlag(const char *data, const Flag *flags, const int nb_flags);
 
 // Fonctions à réimplementer que j'ai pomper d'internet
 void to_hex(int number, char *hex) {
@@ -34,39 +38,96 @@ void to_hex(int number, char *hex) {
 Dict operations_codes[] = {
     {"pop", "00"}, {"ipop", "01"}, {"push", "02"}, {"ipush", "03"},
     {"push#", "04"}, {"jmp", "05"}, {"jnz", "06"}, {"call", "07"},
-    {"ret", "08"}, {"read", "09"},{"write", "0A"}, {"op", "0B"},
-    {"rnd", "0C"}, {"dup", "0D"}, {"halt", "63"}
+    {"ret", "08"}, {"read", "09"},{"write", "0a"}, {"op", "0b"},
+    {"rnd", "0c"}, {"dup", "0d"}, {"halt", "63"}
 };
+
 
 int main(int argc, char** argv)
 {
 
-    // if (argc != 2) {
-    //     exit(1); // Wrong format
-    // }
+    if (argc != 2) {
+        printf("WRONG FORMAT >>> %d files where given, 1 expected\n", argc-1);
+        exit(1);
+    }
 
-    // FILE *input, *output;
 
 
-    // input = fopen(argv[1], "r");
-    // if (input == NULL) {
-    //     exit(1);
-    // }
+    FILE *input;
+    input = fopen(argv[1], "r");
+    if (!input) {
+        printf("MEMORY ERROR >>>\n");
+        exit(1);
+    }
 
-    // // Idea now is to implement a list of lists where every line is an element of the list
-    
+    int nb_line = 0;
+    char input_line[MAX_LINE];
+    Instruction instructions[MAX_LINE];
+    int nb_flags = 0;
+    Flag flags[MAX_LINE];
 
-    
-    // fclose(input);
-    // fclose(output);
 
-    char *text0 = "a:  op c";
+    while (fgets(input_line, MAX_LINE, input)) {
+        Instruction instruct = {NULL, NULL, NULL};
+        convert_line(input_line, &instruct);
+        instructions[nb_line] = instruct;
+        if (instruct.flag != NULL)
+        {
+            flags[nb_flags].name = instruct.flag;
+            flags[nb_flags].adress_line = nb_line;
+            nb_flags++;
+        }
+        nb_line++;
+    }
+    fclose(input);
 
-    Instruction line = {NULL, NULL, NULL};
-    convert_line(text0, &line);
-    printf("%s,%s,%s,\n", line.flag, line.operation, line.data);
+    FILE *output;
+    output = fopen("hexa.txt", "w");
+
+    for (int i=0; i<nb_line; i++)
+    {
+        char *converted_op = get_code(instructions[i].operation);
+        if (strcmp(converted_op, "10") == 0)
+        {
+            printf("ERROR LINE %d\n", i+1);
+            exit(1);
+        }
+        fprintf(output, "%s", converted_op);
+
+        if (instructions[i].data != NULL)
+        {
+            int flag_adress = isFlag(instructions[i].data, flags, nb_flags);
+            if (flag_adress == -1)
+            {
+                fprintf(output, " %04x\n", atoi(instructions[i].data)); // Convert to 4 Hexa
+            }
+            else
+            {
+                int adress = flag_adress-i-1;
+                unsigned short masked_number = (adress & 0xFFFF);
+                fprintf(output, " %04x\n", masked_number); // Convert to 4 Hexa
+            }
+        }
+        else
+        {
+            if (i == nb_line-1)
+            {
+                fprintf(output, " 0000");
+            }
+            else
+            {
+                fprintf(output, " 0000\n");
+            }
+            
+        }
+    }
+
+    fclose(output);
 
 }
+
+
+
 
 char* get_code(const char *operation)
 {
@@ -95,9 +156,9 @@ void convert_line(const char *input, Instruction *line)
                 printf("NO FLAG >>> %s\n", input); // Sentence is in the format ': TEXT'
                 exit(1);
             }
-            line->flag = malloc((i+2) * sizeof(char)); // We add the /0
+            line->flag = malloc((tick+1) * sizeof(char)); // We add the /0
             strncpy(line->flag, input, i);
-            line->flag[i+1] = '\0';
+            line->flag[tick] = '\0';
         }
         i++;
     }
@@ -132,16 +193,29 @@ void convert_line(const char *input, Instruction *line)
         printf("NO OPERATION >>> %s\n", input);
         exit(1); // No operation
     }
-    line->operation = malloc((i-tick+2) * sizeof(char)); // Add /0
+    line->operation = malloc((i-tick+1) * sizeof(char)); // Add /0
     strncpy(line->operation, input+tick, i-tick);
-    line->operation[i-tick+1] = '\0';
+    line->operation[i-tick] = '\0';
+
 
     if (input[i] == ' ' && (input[i+1] != ' ' && input[i+1] != '\0')) // To take care if space after operation
     {
         int n = strlen(input);
-        line->data = malloc((n - i + 3) * sizeof(char));
+        line->data = malloc((n - i) * sizeof(char));
         strncpy(line->data, input+i+1, n-i-1);
-        line->data[n-i+2] = '\0';
+        line->data[n-i-2] = '\0';
     }
 
+}
+
+int isFlag(const char *data, const Flag *flags, const int nb_flags)
+{
+    for (int i = 0; i < nb_flags; i++)
+    {
+        if (strcmp(data, flags[i].name) == 0)
+        {
+            return flags[i].adress_line;
+        }
+    }
+    return -1;
 }
