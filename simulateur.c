@@ -2,6 +2,7 @@
 
 // TODO : Error handling (look for the line : index of the current line), Flags
 // TODO : Clean string before doing checks
+// TODO : Free all
 
 
 #include <stdio.h>
@@ -19,12 +20,11 @@ typedef struct {
     char *flag;
     char *operation;
     char *data;
-    int adress;
 } Instruction;
 
 
 char* get_code(const char *operation);
-void clean_line(char *sentence, int *flag);
+void convert_line(const char *input, Instruction*);
 
 // Fonctions à réimplementer que j'ai pomper d'internet
 void to_hex(int number, char *hex) {
@@ -38,10 +38,11 @@ Dict operations_codes[] = {
     {"rnd", "0C"}, {"dup", "0D"}, {"halt", "63"}
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
 
     // if (argc != 2) {
-    //     return 1; // Wrong format
+    //     exit(1); // Wrong format
     // }
 
     // FILE *input, *output;
@@ -49,7 +50,7 @@ int main(int argc, char** argv) {
 
     // input = fopen(argv[1], "r");
     // if (input == NULL) {
-    //     return 1;
+    //     exit(1);
     // }
 
     // // Idea now is to implement a list of lists where every line is an element of the list
@@ -59,47 +60,87 @@ int main(int argc, char** argv) {
     // fclose(input);
     // fclose(output);
 
-    char *text0 = "flag: blabla";
-    char *text1 = "flag:blabla"; // Should add elements
-    char *text2 = "flag:    blabla";
-    char *text3 = "flag:    blabla";
-    char *text4 = "flag:            blabla";
-    char *text5 = "flag:            blabla";
-    char *text6 = "flag:             blabla";
-    char *text7 = ": blabla"; // Should return Error
-    char *text8 = "     blabla ";
-    int *flag = 0;
-    clean_line(text0, *flag);
-    printf("%s", text0);
+    char *text0 = "";
+    // char *text1 = "flag:blabla"; // Should add elements
+    // char *text2 = "flag:    blabla";
+    // char *text3 = "flag:    blabla";
+    // char *text4 = "flag:            blabla";
+    // char *text5 = "flag:            blabla";
+    // char *text6 = "flag:             blabla";
+    // char *text7 = ": blabla"; // Should return Error
+    // char *text8 = "     blabla ";
+    // int *flag = 0;
+    Instruction line = {NULL, NULL, NULL};
+    convert_line(text0, &line);
+    printf("%s %s\n", line.flag, line.operation);
 
 }
 
-char* get_code(const char *operation) {
-    for (int i = 0; i < sizeof(operations_codes) / sizeof(Dict); i++) {
+char* get_code(const char *operation)
+{
+    for (int i = 0; i < sizeof(operations_codes) / sizeof(Dict); i++)
+    {
         if (strcmp(operations_codes[i].operation, operation) == 0)
+        {
             return operations_codes[i].code;
+        }
     }
     return "10"; // Error handling
 }
 
+// FLAG: Operation #VAL
+void convert_line(const char *input, Instruction *line)
+{
 
-void clean_line(char *sentence, int *flag) {
-    int i = 0;
-    while (sentence[i] != '\0') {
-        if (sentence[i] == ':') {
-            *flag = 1;
-            while (sentence[i+1]==' ' || sentence[i+1] =='\t') {
-                for (int j = i + 1; sentence[j] != '\0'; j++) {
-                    sentence[j] = sentence[j + 1];
-                }
+    int i = 0, tick = 0;
+    while (input[i] != '\0' && tick == 0)
+    {
+        if (input[i] == ':') // We only consider the first ':' per sentence
+        {
+            tick = i;
+            if (tick == 0)
+            {
+                printf("NO FLAG >>> %s\n", input); // Sentence is in the format ': TEXT'
+                exit(1);
             }
-            // Add ONE space after ':'
-            for (int j = i + 1; sentence[j] != '\0'; j++) {
-                sentence[j] = ' ';
-                sentence[j+1] = sentence[j];
-            }            
+            line->flag = malloc((i+2) * sizeof(char)); // We add the /0
+            strncpy(line->flag, input, i);
+            line->flag[i+1] = '\0';
         }
         i++;
     }
+
+
+    if (tick != 0)
+    {
+        i = tick+1;
+    }
+    else
+    {
+        i = tick;
+    }
+
+    // Clear spaces/tabls before operation
+    while (input[i] != '\0' && (input[i] == ' ' || input[i] == '\t'))
+    {
+        i++;
+    }
+
+
+    tick = i;
+
+    // Count operation size
+    while (input[i] != '\0' && input[i] != ' ')
+    {
+        i++;
+    }
+
+    if (tick == i)
+    {
+        exit(1); // No operation
+    }
+    line->operation = malloc((i-tick+2) * sizeof(char)); // Add /0
+    strncpy(line->operation, input+tick, i-tick);
+    line->operation[i+1] = '\0';
 
 }
