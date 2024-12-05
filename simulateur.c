@@ -60,19 +60,11 @@ int main(int argc, char** argv)
     // fclose(input);
     // fclose(output);
 
-    char *text0 = "";
-    // char *text1 = "flag:blabla"; // Should add elements
-    // char *text2 = "flag:    blabla";
-    // char *text3 = "flag:    blabla";
-    // char *text4 = "flag:            blabla";
-    // char *text5 = "flag:            blabla";
-    // char *text6 = "flag:             blabla";
-    // char *text7 = ": blabla"; // Should return Error
-    // char *text8 = "     blabla ";
-    // int *flag = 0;
+    char *text0 = "a:  op c";
+
     Instruction line = {NULL, NULL, NULL};
     convert_line(text0, &line);
-    printf("%s %s\n", line.flag, line.operation);
+    printf("%s,%s,%s,\n", line.flag, line.operation, line.data);
 
 }
 
@@ -137,10 +129,19 @@ void convert_line(const char *input, Instruction *line)
 
     if (tick == i)
     {
+        printf("NO OPERATION >>> %s\n", input);
         exit(1); // No operation
     }
     line->operation = malloc((i-tick+2) * sizeof(char)); // Add /0
     strncpy(line->operation, input+tick, i-tick);
-    line->operation[i+1] = '\0';
+    line->operation[i-tick+1] = '\0';
+
+    if (input[i] == ' ' && (input[i+1] != ' ' && input[i+1] != '\0')) // To take care if space after operation
+    {
+        int n = strlen(input);
+        line->data = malloc((n - i + 3) * sizeof(char));
+        strncpy(line->data, input+i+1, n-i-1);
+        line->data[n-i+2] = '\0';
+    }
 
 }
