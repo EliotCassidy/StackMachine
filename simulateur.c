@@ -1,6 +1,7 @@
 // Ce fichier traduit un code assembleur passé en ligne de commande en un code machine
 
 // TODO : Free all VALGRIND
+// If flag is invalid (doesn't exit) break
 
 
 #include <stdio.h>
