@@ -1,12 +1,13 @@
 // Ce fichier traduit un code assembleur passé en ligne de commande en un code machine
 
 // TODO : Free all VALGRIND
-// If flag is invalid (doesn't exit) break
+// Put the compilation not in main but seperate function
 
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #define MAX_LINE 256
 
@@ -30,11 +31,7 @@ typedef struct {
 char* get_code(const char *operation);
 void convert_line(const char *input, Instruction *line);
 int isFlag(const char *data, const Flag *flags, const int nb_flags);
-
-// Fonctions à réimplementer que j'ai pomper d'internet
-void to_hex(int number, char *hex) {
-    sprintf(hex, "%04X", number);
-}
+int isAllDigits(const char *str);
 
 Dict operations_codes[] = {
     {"pop", "00"}, {"ipop", "01"}, {"push", "02"}, {"ipush", "03"},
@@ -90,7 +87,8 @@ int main(int argc, char** argv)
         char *converted_op = get_code(instructions[i].operation);
         if (strcmp(converted_op, "10") == 0)
         {
-            printf("ERROR LINE %d\n", i+1);
+            printf("OPERATION ERROR >>> %s is not an operation at line %d\n", instructions[i].operation, i+1);
+            remove("hexa.txt");
             exit(1);
         }
         fprintf(output, "%s", converted_op);
@@ -100,6 +98,12 @@ int main(int argc, char** argv)
             int flag_adress = isFlag(instructions[i].data, flags, nb_flags);
             if (flag_adress == -1)
             {
+                if (isAllDigits(instructions[i].data) == 0)
+                {
+                    printf("FLAG ERROR >>> %s is not a flag at line %d\n", instructions[i].data, i+1);
+                    remove("hexa.txt");
+                    exit(1);
+                }
                 fprintf(output, " %04x\n", atoi(instructions[i].data)); // Convert to 4 Hexa
             }
             else
@@ -219,4 +223,15 @@ int isFlag(const char *data, const Flag *flags, const int nb_flags)
         }
     }
     return -1;
+}
+
+int isAllDigits(const char *str)
+{
+    while (*str) {
+        if (!isdigit((unsigned char)*str)) {
+            return 0;
+        }
+        str++;
+    }
+    return 1;
 }
