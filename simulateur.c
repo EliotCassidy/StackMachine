@@ -2,6 +2,9 @@
 
 // TODO : Free all VALGRIND
 // Put the compilation not in main but seperate function
+// Verify that first char is char and that it is A-Z a-z 0-9 "_" only
+// Accept empty lines
+// accpet comments
 
 
 #include <stdio.h>
@@ -9,7 +12,8 @@
 #include <string.h>
 #include <ctype.h>
 
-#define MAX_LINE 256
+#define MAX_LINE 5000
+#define MEMORY 5000
 
 typedef struct {
     char *operation;
@@ -128,6 +132,11 @@ int main(int argc, char** argv)
     }
 
     fclose(output);
+
+    // FILE *machine_code = open("hexa.txt", "r");
+    // int PC = 0;
+    // int SP = 0;
+    // int *STACK[MEMORY];
 
 }
 
