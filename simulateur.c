@@ -5,6 +5,9 @@
 // Verify that first char is char and that it is A-Z a-z 0-9 "_" only
 // Accept empty lines
 // accpet comments
+// Only 3 octets for the data !!!
+// verify that no file is created if error
+// Only print out error line
 
 
 #include <stdio.h>
