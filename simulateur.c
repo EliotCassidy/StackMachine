@@ -5,6 +5,7 @@
 // Accept empty lines
 // accpet comments
 // Only print out error line
+// Check for halt in programme
 
 
 #include <stdio.h>
@@ -138,7 +139,7 @@ int main(int argc, char** argv)
                     exit(1);
                 }
                 // Checks that it fits in 2 octets
-                if (atoi(instructions[i].data) > 65535)
+                if (atoi(instructions[i].data) > 32767)
                 {
                     printf("MEMORY ERROR >>> %s is too big at line %d\n", instructions[i].data, i+1);
                     remove("hexa.txt");
@@ -179,7 +180,7 @@ int main(int argc, char** argv)
     int nb_execute = 0;
     Execute execute_list[MAX_LINE];
 
-    void (*functions[15])(int) = { pop, ipop, push, ipush, pushval, jmp, jnz, call, ret, read, write, op, rnd, dup, halt };
+    void (*functions[15])(int) = { pop, ipop, push, ipush, pushval, jmp, jnz, call, ret, read, write, op, rnd, dup, halt};
 
     while (fgets(execute_line, MAX_LINE, machine_code)) {
         Execute execute;
@@ -200,8 +201,9 @@ int main(int argc, char** argv)
         char data[5];
         strncpy(data, &execute_line[3], 4);
         data[4] = '\0';
-        value = (int)strtol(op, NULL, 16);
-        execute.data = value;
+        int val = (int)strtol(data, NULL, 16);
+        int signed_val = (int)(short)val;
+        execute.data = signed_val;
         execute_list[nb_execute] = execute;
         nb_execute++;
     }
@@ -337,107 +339,79 @@ int isAllDigits(const char *str)
 
 void halt(int i)
 {
-    exit(1);
+    exit(0);
 }
 
 void op(int i)
 {
-    if (i > 15 || ((i == 15 || i == 9) && SP < 0) || SP < 2)
+    if (i > 15 || ((i == 15 || i == 9) && SP < 0) || ((i != 15 && i != 9) && SP < 2))
     {
         exit(1);
     }
-    if (i==0)
+    switch (i)
     {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] == STACK[SP] ? 1 : 0;
-    }
-    
-    if (i==1)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] != STACK[SP] ? 1 : 0;
-    }
-
-    if (i==2)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] >= STACK[SP] ? 1 : 0;
-    }
-
-    if (i==3)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] <= STACK[SP] ? 1 : 0;
-    }
-
-    if (i==4)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] > STACK[SP] ? 1 : 0;
-    }
-
-    if (i==5)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] < STACK[SP] ? 1 : 0;        
-    }
-
-    if (i==6)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] | STACK[SP];
-    }
-
-    if (i==7)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] ^ STACK[SP];
-    }
-
-    if (i==8)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] & STACK[SP];
-    }
-
-    if (i==9)
-    {
-        STACK[SP-1] =~ STACK[SP-1];
-    }
-
-    if (i==10)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] + STACK[SP];
-    }
-
-    if (i==11)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] - STACK[SP];
-    }
-
-    if (i==12)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] * STACK[SP];
-    }
-
-    if (i==13)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] / STACK[SP];
-    }
-
-    if (i==14)
-    {
-        SP--;
-        STACK[SP-1] = STACK[SP-1] % STACK[SP];
-    }
-
-    if (i==15)
-    {
-        STACK[SP-1] = -STACK[SP-1];
+        case 0:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] == STACK[SP] ? 1 : 0;
+            break;
+        case 1:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] != STACK[SP] ? 1 : 0;
+            break;
+        case 2:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] >= STACK[SP] ? 1 : 0;
+            break;
+        case 3:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] <= STACK[SP] ? 1 : 0;
+            break;
+        case 4:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] > STACK[SP] ? 1 : 0;
+            break;
+        case 5:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] < STACK[SP] ? 1 : 0; 
+            break;
+        case 6:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] | STACK[SP];
+            break;
+        case 7:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] ^ STACK[SP];
+            break;
+        case 8:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] & STACK[SP];
+            break;
+        case 9:
+            STACK[SP-1] =~ STACK[SP-1];
+            break;
+        case 10:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] + STACK[SP];
+            break;
+        case 11:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] - STACK[SP];
+            break;
+        case 12:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] * STACK[SP];
+            break;
+        case 13:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] / STACK[SP];
+            break;
+        case 14:
+            SP--;
+            STACK[SP-1] = STACK[SP-1] % STACK[SP];
+            break;
+        case 15:
+            STACK[SP-1] = -STACK[SP-1];
+            break;
     }
     PC++;
 }
@@ -474,7 +448,7 @@ void pushval(int i)
     {
         exit(1);
     }
-    if (i > 65535)
+    if (i > 32767)
     {
         exit(1);
     }
@@ -486,6 +460,7 @@ void pushval(int i)
 void jmp(int adr)
 {
     PC = PC + adr;
+    PC++;
 }
 
 void jnz(int adr)
@@ -500,6 +475,7 @@ void jnz(int adr)
     {
         PC = PC + adr;
     }
+    PC++;
 }
 
 void call(int adr)
@@ -508,13 +484,14 @@ void call(int adr)
     {
         exit(1);
     }
-    if (PC > 65535)
+    if (PC > 32767)
     {
         exit(1);
     }
     STACK[SP] = PC;
     SP++;
     PC = PC + adr;
+    PC++;
 }
 
 void ret(int i)
@@ -526,6 +503,7 @@ void ret(int i)
     SP--;
     int return_adress = STACK[SP];
     PC = return_adress;
+    PC++;
 }
 
 void read(int x)
@@ -536,7 +514,7 @@ void read(int x)
     {
         exit(1);
     }
-    if (i > 65535)
+    if (i > 32767)
     {
         exit(1);
     }
@@ -550,7 +528,7 @@ void write(int x)
     {
         exit(1);
     }
-    printf("%d", STACK[x]);
+    printf("%d\n", STACK[x]);
     PC++;
 }
 
@@ -558,7 +536,7 @@ void rnd(int x)
 {
     srand(time(NULL));
     int r = rand() % x;
-    if (r > 65535)
+    if (r > 32767)
     {
         exit(1);
     }
