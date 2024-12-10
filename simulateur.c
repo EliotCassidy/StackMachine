@@ -175,6 +175,10 @@ int main(int argc, char** argv)
         {
             value = 14;
         }
+        if (value > 14)
+        {
+            exit(1);
+        }
         execute.func = functions[value]; 
 
         char data[5];
@@ -308,8 +312,14 @@ int isAllDigits(const char *str)
     return 1;
 }
 
+
+
 void op(int i)
 {
+    if (i > 15 || ((i == 15 || i == 9) && SP < 0) || SP < 2)
+    {
+        exit(1);
+    }
     if (i==0)
     {
         SP--;
@@ -318,6 +328,89 @@ void op(int i)
     
     if (i==1)
     {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] != STACK[SP] ? 1 : 0;
+    }
 
+    if (i==2)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] >= STACK[SP] ? 1 : 0;
+    }
+
+    if (i==3)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] <= STACK[SP] ? 1 : 0;
+    }
+
+    if (i==4)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] > STACK[SP] ? 1 : 0;
+    }
+
+    if (i==5)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] < STACK[SP] ? 1 : 0;        
+    }
+
+    if (i==6)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] | STACK[SP];
+    }
+
+    if (i==7)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] ^ STACK[SP];
+    }
+
+    if (i==8)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] & STACK[SP];
+    }
+
+    if (i==9)
+    {
+        STACK[SP-1] =~ STACK[SP-1];
+    }
+
+    if (i==10)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] + STACK[SP];
+    }
+
+    if (i==11)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] - STACK[SP];
+    }
+
+    if (i==12)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] * STACK[SP];
+    }
+
+    if (i==13)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] / STACK[SP];
+    }
+
+    if (i==14)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] % STACK[SP];
+    }
+
+    if (i==15)
+    {
+        STACK[SP-1] = -STACK[SP-1];
     }
 }
