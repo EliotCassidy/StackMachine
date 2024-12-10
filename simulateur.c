@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
 
 #define MAX_LINE 5000
 #define MEMORY 5000
@@ -45,7 +46,22 @@ char* get_code(const char *operation);
 void convert_line(const char *input, Instruction *line);
 int isFlag(const char *data, const Flag *flags, const int nb_flags);
 int isAllDigits(const char *str);
-void op(int i);
+
+void pop(int);
+void ipop(int);
+void push(int);
+void ipush(int);
+void pushval(int);
+void jmp(int);
+void jnz(int);
+void call(int);
+void ret(int);
+void read(int);
+void write(int);
+void op(int);
+void rnd(int);
+void dup(int);
+void halt(int);
 
 
 Dict operations_codes[] = {
@@ -163,7 +179,7 @@ int main(int argc, char** argv)
     int nb_execute = 0;
     Execute execute_list[MAX_LINE];
 
-    void (*functions[15])(int) = { op, op, op, op, op, op, op, op, op, op, op, op, op, op, op };
+    void (*functions[15])(int) = { pop, ipop, push, ipush, pushval, jmp, jnz, call, ret, read, write, op, rnd, dup, halt };
 
     while (fgets(execute_line, MAX_LINE, machine_code)) {
         Execute execute;
@@ -190,6 +206,12 @@ int main(int argc, char** argv)
         nb_execute++;
     }
     fclose(machine_code);
+
+    while (1)
+    {
+        Execute exe = execute_list[PC];
+        exe.func(exe.data);
+    }
 
 }
 
@@ -313,6 +335,10 @@ int isAllDigits(const char *str)
 }
 
 
+void halt(int i)
+{
+    exit(1);
+}
 
 void op(int i)
 {
@@ -413,4 +439,171 @@ void op(int i)
     {
         STACK[SP-1] = -STACK[SP-1];
     }
+    PC++;
+}
+
+void push(int x)
+{
+    if (x >= MEMORY)
+    {
+        exit(1);
+    }
+    STACK[SP] = STACK[x];
+    SP++;
+    PC++;
+}
+
+void ipush(int i)
+{
+    if (SP == 0)
+    {
+        exit(1);
+    }
+    i = STACK[SP-1];
+    if (i >= MEMORY)
+    {
+        exit(1);
+    }
+    STACK[SP-1] = STACK[i];
+    PC++;
+}
+
+void pushval(int i)
+{
+    if (SP >= MEMORY)
+    {
+        exit(1);
+    }
+    if (i > 65535)
+    {
+        exit(1);
+    }
+    STACK[SP] = i;
+    SP++;
+    PC++;
+}
+
+void jmp(int adr)
+{
+    PC = PC + adr;
+}
+
+void jnz(int adr)
+{
+    if (SP == 0)
+    {
+        exit(1);
+    }
+    SP--;
+    int x = STACK[SP];
+    if (x != 0)
+    {
+        PC = PC + adr;
+    }
+}
+
+void call(int adr)
+{
+    if (SP >= MEMORY)
+    {
+        exit(1);
+    }
+    if (PC > 65535)
+    {
+        exit(1);
+    }
+    STACK[SP] = PC;
+    SP++;
+    PC = PC + adr;
+}
+
+void ret(int i)
+{
+    if (SP == 0)
+    {
+        exit(1);
+    }
+    SP--;
+    int return_adress = STACK[SP];
+    PC = return_adress;
+}
+
+void read(int x)
+{
+    int i = 0;
+    scanf("%d", &i);
+    if (x >= MEMORY)
+    {
+        exit(1);
+    }
+    if (i > 65535)
+    {
+        exit(1);
+    }
+    STACK[x] = i;
+    PC++;
+}
+
+void write(int x)
+{
+    if (x >= MEMORY)
+    {
+        exit(1);
+    }
+    printf("%d", STACK[x]);
+    PC++;
+}
+
+void rnd(int x)
+{
+    srand(time(NULL));
+    int r = rand() % x;
+    if (r > 65535)
+    {
+        exit(1);
+    }
+    if (SP >= MEMORY)
+    {
+        exit(1);
+    }
+    STACK[SP] = r;
+    SP++;
+    PC++;
+}
+
+void dup(int i)
+{
+    if (SP >= MEMORY)
+    {
+        exit(1);
+    }
+    STACK[SP] = STACK[SP-1];
+    SP++;
+    PC++;
+}
+
+void pop(int x)
+{
+    if (SP <= 0)
+    {
+        exit(1);
+    }
+    if (x >= MEMORY)
+    {
+        exit(1);
+    }
+    SP--;
+    STACK[x] = STACK[SP];
+    PC++;
+}
+
+void ipop(int i)
+{
+    if (SP <= 1 || STACK[SP-1]>= MEMORY)
+    {
+        exit(1);
+    }
+    STACK[STACK[SP-1]] = STACK[SP-2];
+    SP = SP - 2;
+    PC++;
 }
