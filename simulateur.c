@@ -2,11 +2,8 @@
 
 // TODO : Free all VALGRIND
 // Put the compilation not in main but seperate function
-// Verify that first char is char and that it is A-Z a-z 0-9 "_" only
 // Accept empty lines
 // accpet comments
-// Only 3 octets for the data !!!
-// verify that no file is created if error
 // Only print out error line
 
 
@@ -17,6 +14,10 @@
 
 #define MAX_LINE 5000
 #define MEMORY 5000
+
+int PC = 0;
+int SP = 0;
+int STACK[MEMORY];
 
 typedef struct {
     char *operation;
@@ -34,11 +35,18 @@ typedef struct {
     char *data;
 } Instruction;
 
+typedef struct {
+    int data;
+    void (*func)(int);
+} Execute;
+
 
 char* get_code(const char *operation);
 void convert_line(const char *input, Instruction *line);
 int isFlag(const char *data, const Flag *flags, const int nb_flags);
 int isAllDigits(const char *str);
+void op(int i);
+
 
 Dict operations_codes[] = {
     {"pop", "00"}, {"ipop", "01"}, {"push", "02"}, {"ipush", "03"},
@@ -46,6 +54,8 @@ Dict operations_codes[] = {
     {"ret", "08"}, {"read", "09"},{"write", "0a"}, {"op", "0b"},
     {"rnd", "0c"}, {"dup", "0d"}, {"halt", "63"}
 };
+
+
 
 
 int main(int argc, char** argv)
@@ -111,6 +121,13 @@ int main(int argc, char** argv)
                     remove("hexa.txt");
                     exit(1);
                 }
+                // Checks that it fits in 2 octets
+                if (atoi(instructions[i].data) > 65535)
+                {
+                    printf("MEMORY ERROR >>> %s is too big at line %d\n", instructions[i].data, i+1);
+                    remove("hexa.txt");
+                    exit(1);                    
+                }
                 fprintf(output, " %04x\n", atoi(instructions[i].data)); // Convert to 4 Hexa
             }
             else
@@ -136,10 +153,39 @@ int main(int argc, char** argv)
 
     fclose(output);
 
-    // FILE *machine_code = open("hexa.txt", "r");
-    // int PC = 0;
-    // int SP = 0;
-    // int *STACK[MEMORY];
+    FILE *machine_code = fopen("hexa.txt", "r");
+    if (machine_code == NULL)
+    {
+        exit(1);
+    }
+
+    char execute_line[MAX_LINE];
+    int nb_execute = 0;
+    Execute execute_list[MAX_LINE];
+
+    void (*functions[15])(int) = { op, op, op, op, op, op, op, op, op, op, op, op, op, op, op };
+
+    while (fgets(execute_line, MAX_LINE, machine_code)) {
+        Execute execute;
+        char op[3];
+        strncpy(op, execute_line, 2);
+        op[2] = '\0';
+        int value = (int)strtol(op, NULL, 16);
+        if (value == 99)
+        {
+            value = 14;
+        }
+        execute.func = functions[value]; 
+
+        char data[5];
+        strncpy(data, &execute_line[3], 4);
+        data[4] = '\0';
+        value = (int)strtol(op, NULL, 16);
+        execute.data = value;
+        execute_list[nb_execute] = execute;
+        nb_execute++;
+    }
+    fclose(machine_code);
 
 }
 
@@ -161,7 +207,6 @@ char* get_code(const char *operation)
 // FLAG: Operation #VAL
 void convert_line(const char *input, Instruction *line)
 {
-
     int i = 0, tick = 0;
     while (input[i] != '\0' && tick == 0)
     {
@@ -173,6 +218,21 @@ void convert_line(const char *input, Instruction *line)
                 printf("NO FLAG >>> %s\n", input); // Sentence is in the format ': TEXT'
                 exit(1);
             }
+
+            if (isalpha(input[0]) == 0)
+            {
+                printf("WRONG FORMAT OF FLAG >>> %s\n", input);
+                exit(1);                
+            }
+            for (int j = 0; j < i; j++)
+            {
+                if (isalpha(input[j]) == 0 && isdigit(input[j]) == 0 && input[j] != '_')
+                {
+                printf("WRONG FORMAT OF FLAG >>> %s\n", input);
+                exit(1);                                 
+                }
+            }
+
             line->flag = malloc((tick+1) * sizeof(char)); // We add the /0
             strncpy(line->flag, input, i);
             line->flag[tick] = '\0';
@@ -246,4 +306,18 @@ int isAllDigits(const char *str)
         str++;
     }
     return 1;
+}
+
+void op(int i)
+{
+    if (i==0)
+    {
+        SP--;
+        STACK[SP-1] = STACK[SP-1] == STACK[SP] ? 1 : 0;
+    }
+    
+    if (i==1)
+    {
+
+    }
 }
