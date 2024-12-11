@@ -44,7 +44,7 @@ typedef struct {
 
 
 char* get_code(const char *operation);
-void convert_line(const char *input, Instruction *line);
+int convert_line(char *input, Instruction *line);
 int isFlag(const char *data, const Flag *flags, const int nb_flags);
 int isAllDigits(const char *str);
 
@@ -101,15 +101,18 @@ int main(int argc, char** argv)
 
     while (fgets(input_line, MAX_LINE, input)) {
         Instruction instruct = {NULL, NULL, NULL};
-        convert_line(input_line, &instruct);
-        instructions[nb_line] = instruct;
-        if (instruct.flag != NULL)
+        int is_empty = convert_line(input_line, &instruct);
+        if (is_empty == 0)
         {
-            flags[nb_flags].name = instruct.flag;
-            flags[nb_flags].adress_line = nb_line;
-            nb_flags++;
+            instructions[nb_line] = instruct;
+            if (instruct.flag != NULL)
+            {
+                flags[nb_flags].name = instruct.flag;
+                flags[nb_flags].adress_line = nb_line;
+                nb_flags++;
+            }
+            nb_line++;
         }
-        nb_line++;
     }
     fclose(input);
 
@@ -233,9 +236,43 @@ char* get_code(const char *operation)
 }
 
 // FLAG: Operation #VAL
-void convert_line(const char *input, Instruction *line)
+int convert_line(char *input, Instruction *line)
 {
-    int i = 0, tick = 0;
+    // Check if comments
+    for (int i = 0, n = strlen(input); i < n; i++)
+    {
+        if (input[i] == ';')
+        {
+            if (i == strlen(input)-1)
+            {
+                input[i] = '\0';
+            }
+            else
+            {
+                input[i] = '\n';
+                input[i+1] = '\0';
+            }
+
+        }
+    }
+    int is_empty = 1;
+    // White line/spaces/tabs
+    for (int i = 0; i < strlen(input); i++)
+    {
+        if (input[i] != ' ' && input[i] != '\t' && input[i] != '\0' && input[i] != '\n')
+        {
+            is_empty = 0;
+            break;
+        }
+    }
+
+    if (is_empty == 1)
+    {
+        return 1;
+    }
+
+    int tick = 0;
+    int i = 0;
     while (input[i] != '\0' && tick == 0)
     {
         if (input[i] == ':') // We only consider the first ':' per sentence
@@ -296,21 +333,41 @@ void convert_line(const char *input, Instruction *line)
     if (tick == i)
     {
         printf("NO OPERATION >>> %s\n", input);
-        exit(1); // No operation
+        exit(1);
     }
     line->operation = malloc((i-tick+1) * sizeof(char)); // Add /0
     strncpy(line->operation, input+tick, i-tick);
     line->operation[i-tick] = '\0';
 
 
-    if (input[i] == ' ' && (input[i+1] != ' ' && input[i+1] != '\0')) // To take care if space after operation
+    if (input[i] == ' ' && (input[i+1] != ' ' && input[i+1] != '\0' && input[i+1] != '\n')) // To take care if space after operation
     {
-        int n = strlen(input);
-        line->data = malloc((n - i) * sizeof(char));
-        strncpy(line->data, input+i+1, n-i-1);
-        line->data[n-i-2] = '\0';
-    }
+        int j = i+1;
+        // Place of space after data before space
+        while (input[j] != '\0' && (input[j] != ' ' && input[j] != '\t' && input[j] != '\n'))
+        {
+            j++;
+        }
 
+        // read 1000        blabla ; This should create an error
+        for (int k = j; k < strlen(input); k++)
+        {
+            if (input[k] != '\0' && input[k] != '\t' && input[k] != ' ' && input[k] != '\n')
+            {
+                printf("COMPILE ERROR >>>>%s\n", input);
+                exit(1);
+            }
+        }
+        if (j != i+1)
+        {
+            j--;
+            line->data = malloc((j-i+1) * sizeof(char));
+            strncpy(line->data, input+i+1, j-i);
+            line->data[j-i] = '\0';
+        }
+
+    }
+    return 0;
 }
 
 int isFlag(const char *data, const Flag *flags, const int nb_flags)
