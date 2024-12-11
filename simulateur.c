@@ -138,12 +138,12 @@ int main(int argc, char** argv)
                     remove("hexa.txt");
                     exit(1);
                 }
-                // Checks that it fits in 2 octets
-                if (atoi(instructions[i].data) > 32767)
+
+                if (atoi(instructions[i].data) > MEMORY)
                 {
                     printf("MEMORY ERROR >>> %s is too big at line %d\n", instructions[i].data, i+1);
                     remove("hexa.txt");
-                    exit(1);                    
+                    exit(1);
                 }
                 fprintf(output, " %04x\n", atoi(instructions[i].data)); // Convert to 4 Hexa
             }
@@ -275,10 +275,10 @@ void convert_line(const char *input, Instruction *line)
     }
     else
     {
-        i = tick;
+        i = 0;
     }
 
-    // Clear spaces/tabls before operation
+    // Clear spaces/tabs before operation
     while (input[i] != '\0' && (input[i] == ' ' || input[i] == '\t'))
     {
         i++;
@@ -288,7 +288,7 @@ void convert_line(const char *input, Instruction *line)
     tick = i;
 
     // Count operation size
-    while (input[i] != '\0' && input[i] != ' ')
+    while (input[i] != '\0' && (input[i] != ' ' && input[i] != '\n'))
     {
         i++;
     }
@@ -501,8 +501,7 @@ void ret(int i)
         exit(1);
     }
     SP--;
-    int return_adress = STACK[SP];
-    PC = return_adress;
+    PC = STACK[SP];
     PC++;
 }
 
