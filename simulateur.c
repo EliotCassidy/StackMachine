@@ -1,11 +1,6 @@
-// Ce fichier traduit un code assembleur passé en ligne de commande en un code machine
-
 // TODO : Free all VALGRIND
 // Put the compilation not in main but seperate function
-// Accept empty lines
-// accpet comments
 // Only print out error line
-// Check for halt in programme
 
 
 #include <stdio.h>
@@ -47,6 +42,7 @@ char* get_code(const char *operation);
 int convert_line(char *input, Instruction *line);
 int isFlag(const char *data, const Flag *flags, const int nb_flags);
 int isAllDigits(const char *str);
+void freeAll(Instruction *, int);
 
 void pop(int);
 void ipop(int);
@@ -211,16 +207,14 @@ int main(int argc, char** argv)
         nb_execute++;
     }
     fclose(machine_code);
-
+    freeAll(instructions, nb_line);
     while (1)
     {
         Execute exe = execute_list[PC];
         exe.func(exe.data);
+        PC++;
     }
-
 }
-
-
 
 
 char* get_code(const char *operation)
@@ -470,7 +464,6 @@ void op(int i)
             STACK[SP-1] = -STACK[SP-1];
             break;
     }
-    PC++;
 }
 
 void push(int x)
@@ -481,7 +474,6 @@ void push(int x)
     }
     STACK[SP] = STACK[x];
     SP++;
-    PC++;
 }
 
 void ipush(int i)
@@ -496,7 +488,6 @@ void ipush(int i)
         exit(1);
     }
     STACK[SP-1] = STACK[i];
-    PC++;
 }
 
 void pushval(int i)
@@ -511,13 +502,11 @@ void pushval(int i)
     }
     STACK[SP] = i;
     SP++;
-    PC++;
 }
 
 void jmp(int adr)
 {
     PC = PC + adr;
-    PC++;
 }
 
 void jnz(int adr)
@@ -532,7 +521,6 @@ void jnz(int adr)
     {
         PC = PC + adr;
     }
-    PC++;
 }
 
 void call(int adr)
@@ -548,7 +536,6 @@ void call(int adr)
     STACK[SP] = PC;
     SP++;
     PC = PC + adr;
-    PC++;
 }
 
 void ret(int i)
@@ -559,7 +546,6 @@ void ret(int i)
     }
     SP--;
     PC = STACK[SP];
-    PC++;
 }
 
 void read(int x)
@@ -575,7 +561,6 @@ void read(int x)
         exit(1);
     }
     STACK[x] = i;
-    PC++;
 }
 
 void write(int x)
@@ -585,7 +570,6 @@ void write(int x)
         exit(1);
     }
     printf("%d\n", STACK[x]);
-    PC++;
 }
 
 void rnd(int x)
@@ -602,7 +586,6 @@ void rnd(int x)
     }
     STACK[SP] = r;
     SP++;
-    PC++;
 }
 
 void dup(int i)
@@ -613,7 +596,6 @@ void dup(int i)
     }
     STACK[SP] = STACK[SP-1];
     SP++;
-    PC++;
 }
 
 void pop(int x)
@@ -628,7 +610,6 @@ void pop(int x)
     }
     SP--;
     STACK[x] = STACK[SP];
-    PC++;
 }
 
 void ipop(int i)
@@ -639,5 +620,21 @@ void ipop(int i)
     }
     STACK[STACK[SP-1]] = STACK[SP-2];
     SP = SP - 2;
-    PC++;
+}
+
+void freeAll(Instruction *instructions, int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        free(instructions[i].operation);
+        if (!instructions[i].data)
+        {
+            free(instructions[i].data);
+        }
+        if (!instructions[i].flag)
+        {
+            free(instructions[i].flag);
+        }
+
+    }
 }
