@@ -43,6 +43,7 @@ int convert_line(char *input, Instruction *line);
 int isFlag(const char *data, const Flag *flags, const int nb_flags);
 int isAllDigits(const char *str);
 void freeAll(Instruction *, int);
+int is_integer(const char *str);
 
 void pop(int);
 void ipop(int);
@@ -126,25 +127,32 @@ int main(int argc, char** argv)
         }
         fprintf(output, "%s", converted_op);
 
+        int is_data = strcmp(converted_op, "01") == 0 || strcmp(converted_op, "03") == 0 || strcmp(converted_op, "08") == 0 || strcmp(converted_op, "0d") == 0 || strcmp(converted_op, "63" ) == 0;
         if (instructions[i].data != NULL)
         {
+            if (is_data) {
+                printf("DATA ERROR >>> %s does not take an argument at line %d\n", instructions[i].operation, i+1);
+                remove("hexa.txt");
+                exit(1);
+            } 
             int flag_adress = isFlag(instructions[i].data, flags, nb_flags);
             if (flag_adress == -1)
             {
-                if (isAllDigits(instructions[i].data) == 0)
+                if (!is_integer(instructions[i].data))
                 {
                     printf("FLAG ERROR >>> %s is not a flag at line %d\n", instructions[i].data, i+1);
                     remove("hexa.txt");
                     exit(1);
                 }
 
-                if (atoi(instructions[i].data) > MEMORY)
+                if (abs(atoi(instructions[i].data)) > MEMORY)
                 {
                     printf("MEMORY ERROR >>> %s is too big at line %d\n", instructions[i].data, i+1);
                     remove("hexa.txt");
                     exit(1);
                 }
-                fprintf(output, " %04x\n", atoi(instructions[i].data)); // Convert to 4 Hexa
+                unsigned short masked_number = (atoi(instructions[i].data) & 0xFFFF);
+                fprintf(output, " %04x\n", masked_number);
             }
             else
             {
@@ -155,6 +163,11 @@ int main(int argc, char** argv)
         }
         else
         {
+            if (!is_data) {
+                printf("DATA ERROR >>> %s takes an argument at line %d\n", instructions[i].operation, i+1);
+                remove("hexa.txt");
+                exit(1);
+            }
             if (i == nb_line-1)
             {
                 fprintf(output, " 0000");
@@ -216,6 +229,15 @@ int main(int argc, char** argv)
     }
 }
 
+int is_integer(const char *str) {
+    if (!str || *str == '\0') return 0;  // Empty string check
+
+    char *endptr;
+    strtol(str, &endptr, 10);
+
+    // Ensure the entire string was a valid integer (no leftovers)
+    return *endptr == '\0';
+}
 
 char* get_code(const char *operation)
 {
@@ -453,10 +475,18 @@ void op(int i)
             STACK[SP-1] = STACK[SP-1] * STACK[SP];
             break;
         case 13:
+            if (STACK[SP] == 0) {
+                printf("Division by 0\n");
+                exit(1);
+            }
             SP--;
             STACK[SP-1] = STACK[SP-1] / STACK[SP];
             break;
         case 14:
+            if (STACK[SP] < 0) {
+                printf("Modulo by 0\n");
+                exit(1);
+            }
             SP--;
             STACK[SP-1] = STACK[SP-1] % STACK[SP];
             break;
@@ -506,6 +536,10 @@ void pushval(int i)
 
 void jmp(int adr)
 {
+    if (PC + adr >= 32767  || PC + adr < -1) {
+        printf(">>>> Jump error\n");
+        exit(1);
+    }
     PC = PC + adr;
 }
 
@@ -519,6 +553,10 @@ void jnz(int adr)
     int x = STACK[SP];
     if (x != 0)
     {
+        if (PC + adr >= 32767  || PC + adr < -1) {
+            printf(">>>> Jump error\n");
+            exit(1);
+        }
         PC = PC + adr;
     }
 }
@@ -529,8 +567,8 @@ void call(int adr)
     {
         exit(1);
     }
-    if (PC > 32767)
-    {
+    if (PC + adr >= 32767  || PC + adr < -1) {
+        printf(">>>> Jump error\n");
         exit(1);
     }
     STACK[SP] = PC;
@@ -545,6 +583,10 @@ void ret(int i)
         exit(1);
     }
     SP--;
+    if (STACK[SP] >= 32767 || STACK[SP] < -1) {
+        printf(">>>> Jump error\n");
+        exit(1);
+    }
     PC = STACK[SP];
 }
 
@@ -574,6 +616,10 @@ void write(int x)
 
 void rnd(int x)
 {
+    if (x < 1) {
+        printf("RANGE ERROR >>> %d\n", x);
+        exit(1);
+    }
     srand(time(NULL));
     int r = rand() % x;
     if (r > 32767)
