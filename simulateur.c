@@ -44,6 +44,7 @@ char* get_code(const char *operation);
 int convert_line(char *input, Instruction *line);
 int isFlag(const char *data, const Flag *flags, const int nb_flags);
 int isAllDigits(const char *str);
+void freeLine(Instruction *line);
 void freeAll(Instruction *, int);
 int is_integer(const char *str);
 
@@ -123,6 +124,7 @@ int main(int argc, char** argv)
         char *converted_op = get_code(instructions[i].operation);
         if (strcmp(converted_op, "10") == 0)
         {
+            freeAll(instructions, nb_line);
             printf("OPERATION ERROR >>> %s is not an operation at line %d\n", instructions[i].operation, i+1);
             remove("hexa.txt");
             exit(1);
@@ -133,6 +135,7 @@ int main(int argc, char** argv)
         if (instructions[i].data != NULL)
         {
             if (is_data) {
+                freeAll(instructions, nb_line);
                 printf("DATA ERROR >>> %s does not take an argument at line %d\n", instructions[i].operation, i+1);
                 remove("hexa.txt");
                 exit(1);
@@ -142,6 +145,7 @@ int main(int argc, char** argv)
             {
                 if (!is_integer(instructions[i].data))
                 {
+                    freeAll(instructions, nb_line);
                     printf("FLAG ERROR >>> %s is not a flag at line %d\n", instructions[i].data, i+1);
                     remove("hexa.txt");
                     exit(1);
@@ -149,6 +153,7 @@ int main(int argc, char** argv)
 
                 if (abs(atoi(instructions[i].data)) > MEMORY)
                 {
+                    freeAll(instructions, nb_line);
                     printf("MEMORY ERROR >>> %s is too big at line %d\n", instructions[i].data, i+1);
                     remove("hexa.txt");
                     exit(1);
@@ -166,6 +171,7 @@ int main(int argc, char** argv)
         else
         {
             if (!is_data) {
+                freeAll(instructions, nb_line);
                 printf("DATA ERROR >>> %s takes an argument at line %d\n", instructions[i].operation, i+1);
                 remove("hexa.txt");
                 exit(1);
@@ -183,6 +189,7 @@ int main(int argc, char** argv)
     }
 
     fclose(output);
+    freeAll(instructions, nb_line);
 
     FILE *machine_code = fopen("hexa.txt", "r");
     if (machine_code == NULL)
@@ -224,7 +231,6 @@ int main(int argc, char** argv)
         nb_execute++;
     }
     fclose(machine_code);
-    freeAll(instructions, nb_line);
     Execute null_execute = {0, NULL};
     execute_list[nb_execute] = null_execute;
 
@@ -357,6 +363,7 @@ int convert_line(char *input, Instruction *line)
 
     if (tick == i)
     {
+        freeLine(line);
         printf("NO OPERATION >>> %s\n", input);
         exit(1);
     }
@@ -379,6 +386,7 @@ int convert_line(char *input, Instruction *line)
         {
             if (input[k] != '\0' && input[k] != '\t' && input[k] != ' ' && input[k] != '\n')
             {
+                freeLine(line);
                 printf("COMPILE ERROR >>>>%s\n", input);
                 exit(1);
             }
@@ -724,19 +732,27 @@ void deb(int i)
     printf("]\n");
 }
 
+void freeLine(Instruction *line)
+{
+    if (line->operation)
+    {
+        free(line->operation);
+    }
+    if (line->data)
+    {
+        free(line->data);
+    }
+    if (line->flag)
+    {
+        free(line->flag);
+    }
+}
+
+
 void freeAll(Instruction *instructions, int n)
 {
     for (int i = 0; i < n; i++)
     {
-        free(instructions[i].operation);
-        if (!instructions[i].data)
-        {
-            free(instructions[i].data);
-        }
-        if (!instructions[i].flag)
-        {
-            free(instructions[i].flag);
-        }
-
+        freeLine(&instructions[i]);
     }
 }
