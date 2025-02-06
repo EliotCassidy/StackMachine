@@ -1,11 +1,23 @@
-ici: read 1000
-        push 1000
-      push# 0
-  op 0
- jnz fin
-      push 1000
-    op 15
-     pop 1000
-    write 1000
-    jmp ici
-fin: halt
+; Program to ask the size of a random list to the user and sort it
+
+read 1000 ;
+push 1000 ; [n]
+
+push# 0; [n, i]
+
+
+populate:   rnd 10          ; [n, i, x1]                      | [n, i+1, x1, x2]
+            write -1
+            push 1          ; [n, i, x1, i]                   | [n, i+1, x1, x2, i+1]
+            push# 1         ; [n, i, x1, i, 1]                | [n, i+1, x1, x2, i+1, 1]
+            op 10           ; [n, i, x1, i+1]                 | [n, i+1, x1, x2, i+2]
+            dup             ; [n, i, x1, i+1, i+1]            | [n, i+1, x1, x2, i+2, i+2]
+            pop 1           ; [n, i+1, x1, i+1]               | [n, i+2, x1, x2, i+2]
+            push 0          ; [n, i+1, x1, i+1, n]            | [n, i+2, x1, x2, i+2, n]
+            op 1            ; [n, i+1, x1, i+1 != n ? 1 : 0]  |
+            jnz populate
+
+push# -1
+deb
+
+halt

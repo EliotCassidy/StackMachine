@@ -12,9 +12,11 @@
 #define MAX_LINE 5000
 #define MEMORY 5000
 
+int nb_line = 0;
 int PC = 0;
 int SP = 0;
-int STACK[MEMORY];
+int STACK[MEMORY] = {0};
+int seed = 0;
 
 typedef struct {
     char *operation;
@@ -59,6 +61,7 @@ void write(int);
 void op(int);
 void rnd(int);
 void dup(int);
+void deb(int);
 void halt(int);
 
 
@@ -66,7 +69,7 @@ Dict operations_codes[] = {
     {"pop", "00"}, {"ipop", "01"}, {"push", "02"}, {"ipush", "03"},
     {"push#", "04"}, {"jmp", "05"}, {"jnz", "06"}, {"call", "07"},
     {"ret", "08"}, {"read", "09"},{"write", "0a"}, {"op", "0b"},
-    {"rnd", "0c"}, {"dup", "0d"}, {"halt", "63"}
+    {"rnd", "0c"}, {"dup", "0d"}, {"deb", "0e"}, {"halt", "63"}
 };
 
 
@@ -89,7 +92,6 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    int nb_line = 0;
     char input_line[MAX_LINE];
     Instruction instructions[MAX_LINE];
     int nb_flags = 0;
@@ -127,7 +129,7 @@ int main(int argc, char** argv)
         }
         fprintf(output, "%s", converted_op);
 
-        int is_data = strcmp(converted_op, "01") == 0 || strcmp(converted_op, "03") == 0 || strcmp(converted_op, "08") == 0 || strcmp(converted_op, "0d") == 0 || strcmp(converted_op, "63" ) == 0;
+        int is_data = strcmp(converted_op, "01") == 0 || strcmp(converted_op, "03") == 0 || strcmp(converted_op, "08") == 0 || strcmp(converted_op, "0d") == 0 || strcmp(converted_op, "0e") == 0 || strcmp(converted_op, "63" ) == 0;
         if (instructions[i].data != NULL)
         {
             if (is_data) {
@@ -185,6 +187,7 @@ int main(int argc, char** argv)
     FILE *machine_code = fopen("hexa.txt", "r");
     if (machine_code == NULL)
     {
+        printf("Couldn't open file\n");
         exit(1);
     }
 
@@ -192,7 +195,7 @@ int main(int argc, char** argv)
     int nb_execute = 0;
     Execute execute_list[MAX_LINE];
 
-    void (*functions[15])(int) = { pop, ipop, push, ipush, pushval, jmp, jnz, call, ret, read, write, op, rnd, dup, halt};
+    void (*functions[16])(int) = { pop, ipop, push, ipush, pushval, jmp, jnz, call, ret, read, write, op, rnd, dup, deb, halt};
 
     while (fgets(execute_line, MAX_LINE, machine_code)) {
         Execute execute;
@@ -202,10 +205,11 @@ int main(int argc, char** argv)
         int value = (int)strtol(op, NULL, 16);
         if (value == 99)
         {
-            value = 14;
+            value = 15;
         }
-        if (value > 14)
+        if (value > 15)
         {
+            printf("op error\n");
             exit(1);
         }
         execute.func = functions[value]; 
@@ -221,12 +225,17 @@ int main(int argc, char** argv)
     }
     fclose(machine_code);
     freeAll(instructions, nb_line);
-    while (1)
+    Execute null_execute = {0, NULL};
+    execute_list[nb_execute] = null_execute;
+
+    while (execute_list[PC].func != NULL)
     {
         Execute exe = execute_list[PC];
         exe.func(exe.data);
         PC++;
     }
+    printf("Program terminated >>> Standard exit 0. Please put halt to stop graciously\n");
+    exit(0);
 }
 
 int is_integer(const char *str) {
@@ -419,6 +428,7 @@ void op(int i)
 {
     if (i > 15 || ((i == 15 || i == 9) && SP < 0) || ((i != 15 && i != 9) && SP < 2))
     {
+        printf("Operation code error\n");
         exit(1);
     }
     switch (i)
@@ -498,8 +508,14 @@ void op(int i)
 
 void push(int x)
 {
-    if (x >= MEMORY)
+    if (SP > MEMORY)
     {
+        printf("Overflow\n");
+        exit(1);
+    }
+    if (x >= MEMORY || x < 0)
+    {
+        printf("MEMORY ERROR >>> Address %d out of bounds\n", x);
         exit(1);
     }
     STACK[SP] = STACK[x];
@@ -510,24 +526,28 @@ void ipush(int i)
 {
     if (SP == 0)
     {
+        printf("SP underflow\n");
         exit(1);
     }
-    i = STACK[SP-1];
-    if (i >= MEMORY)
+    int addr = STACK[SP-1];
+    if (addr >= MEMORY || addr < 0)
     {
+        printf("MEMORY ERROR >>> Address %d out of bounds\n", addr);
         exit(1);
     }
-    STACK[SP-1] = STACK[i];
+    STACK[SP-1] = STACK[addr];
 }
 
 void pushval(int i)
 {
     if (SP >= MEMORY)
     {
+        printf("SP overflow\n");
         exit(1);
     }
     if (i > 32767)
     {
+        printf("Memory overflow\n");
         exit(1);
     }
     STACK[SP] = i;
@@ -536,7 +556,7 @@ void pushval(int i)
 
 void jmp(int adr)
 {
-    if (PC + adr >= 32767  || PC + adr < -1) {
+    if (PC + adr >= nb_line  || PC + adr < -1) {
         printf(">>>> Jump error\n");
         exit(1);
     }
@@ -547,13 +567,14 @@ void jnz(int adr)
 {
     if (SP == 0)
     {
+        printf(">>>> Stack underflow\n");
         exit(1);
     }
     SP--;
     int x = STACK[SP];
     if (x != 0)
     {
-        if (PC + adr >= 32767  || PC + adr < -1) {
+        if (PC + adr >= nb_line  || PC + adr < -1) {
             printf(">>>> Jump error\n");
             exit(1);
         }
@@ -565,9 +586,10 @@ void call(int adr)
 {
     if (SP >= MEMORY)
     {
+        printf(">>>> Stack overflow\n");
         exit(1);
     }
-    if (PC + adr >= 32767  || PC + adr < -1) {
+    if (PC + adr >= nb_line  || PC + adr < -1) {
         printf(">>>> Jump error\n");
         exit(1);
     }
@@ -583,7 +605,7 @@ void ret(int i)
         exit(1);
     }
     SP--;
-    if (STACK[SP] >= 32767 || STACK[SP] < -1) {
+    if (STACK[SP] >= nb_line || STACK[SP] < -1) {
         printf(">>>> Jump error\n");
         exit(1);
     }
@@ -596,12 +618,16 @@ void read(int x)
     scanf("%d", &i);
     if (x >= MEMORY)
     {
+        printf("Stack overflow\n");
         exit(1);
     }
     if (i > 32767)
     {
+        printf("Memory overflow\n");
         exit(1);
     }
+    
+    if (x)
     STACK[x] = i;
 }
 
@@ -609,9 +635,23 @@ void write(int x)
 {
     if (x >= MEMORY)
     {
+        printf("Memory overflow\n");
         exit(1);
     }
-    printf("%d\n", STACK[x]);
+    if (x < -1) {
+        printf("Memory underlow\n");
+        exit(1);        
+    }
+    if (x == -1) {
+        if (SP <= 0) {
+            printf("Stack underflow\n");
+            exit(1);
+        }
+        printf("%d\n", STACK[SP-1]);
+    }
+    else {
+        printf("%d\n", STACK[x]);
+    }
 }
 
 void rnd(int x)
@@ -620,14 +660,17 @@ void rnd(int x)
         printf("RANGE ERROR >>> %d\n", x);
         exit(1);
     }
-    srand(time(NULL));
+    srand(time(NULL) + seed);
+    seed += 1;
     int r = rand() % x;
     if (r > 32767)
     {
+        printf("Memory overflow\n");
         exit(1);
     }
     if (SP >= MEMORY)
     {
+        printf("Stack overflow\n");
         exit(1);
     }
     STACK[SP] = r;
@@ -638,6 +681,7 @@ void dup(int i)
 {
     if (SP >= MEMORY)
     {
+        printf("Stack overflow\n");
         exit(1);
     }
     STACK[SP] = STACK[SP-1];
@@ -648,10 +692,12 @@ void pop(int x)
 {
     if (SP <= 0)
     {
+        printf("Stack underflow\n");
         exit(1);
     }
     if (x >= MEMORY)
     {
+        printf("Memory overflow\n");
         exit(1);
     }
     SP--;
@@ -662,10 +708,20 @@ void ipop(int i)
 {
     if (SP <= 1 || STACK[SP-1]>= MEMORY)
     {
+        printf("Memory overflow\n");
         exit(1);
     }
     STACK[STACK[SP-1]] = STACK[SP-2];
     SP = SP - 2;
+}
+
+void deb(int i)
+{
+    printf("[ ");
+    for (int i = 0; i < SP; i++) {
+        printf("%d, ", STACK[i]);
+    }
+    printf("]\n");
 }
 
 void freeAll(Instruction *instructions, int n)
