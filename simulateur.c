@@ -41,7 +41,7 @@ typedef struct {
 
 
 char* get_code(const char *operation);
-int convert_line(char *input, Instruction *line);
+int convert_line(char *input, Instruction *line, FILE *f);
 int isFlag(const char *data, const Flag *flags, const int nb_flags);
 int isAllDigits(const char *str);
 void freeLine(Instruction *line);
@@ -101,7 +101,7 @@ int main(int argc, char** argv)
 
     while (fgets(input_line, MAX_LINE, input)) {
         Instruction instruct = {NULL, NULL, NULL};
-        int is_empty = convert_line(input_line, &instruct);
+        int is_empty = convert_line(input_line, &instruct, input);
         if (is_empty == 0)
         {
             instructions[nb_line] = instruct;
@@ -146,8 +146,8 @@ int main(int argc, char** argv)
             {
                 if (!is_integer(instructions[i].data))
                 {
-                    freeAll(instructions, nb_line);
                     printf("FLAG ERROR >>> %s is not a flag at line %d\n", instructions[i].data, i+1);
+                    freeAll(instructions, nb_line);
                     fclose(output);
                     remove("hexa.txt");
                     exit(1);
@@ -155,8 +155,8 @@ int main(int argc, char** argv)
 
                 if (abs(atoi(instructions[i].data)) > MEMORY)
                 {
-                    freeAll(instructions, nb_line);
                     printf("MEMORY ERROR >>> %s is too big at line %d\n", instructions[i].data, i+1);
+                    freeAll(instructions, nb_line);
                     fclose(output);
                     remove("hexa.txt");
                     exit(1);
@@ -174,8 +174,8 @@ int main(int argc, char** argv)
         else
         {
             if (!is_data) {
-                freeAll(instructions, nb_line);
                 printf("DATA ERROR >>> %s takes an argument at line %d\n", instructions[i].operation, i+1);
+                freeAll(instructions, nb_line);
                 fclose(output);
                 remove("hexa.txt");
                 exit(1);
@@ -221,6 +221,7 @@ int main(int argc, char** argv)
         if (value > 15)
         {
             printf("op error\n");
+            fclose(machine_code);
             exit(1);
         }
         execute.func = functions[value]; 
@@ -271,7 +272,7 @@ char* get_code(const char *operation)
 }
 
 // FLAG: Operation #VAL
-int convert_line(char *input, Instruction *line)
+int convert_line(char *input, Instruction *line, FILE *f)
 {
     // Check if comments
     for (int i = 0, n = strlen(input); i < n; i++)
@@ -316,12 +317,14 @@ int convert_line(char *input, Instruction *line)
             if (tick == 0)
             {
                 printf("NO FLAG >>> %s\n", input); // Sentence is in the format ': TEXT'
+                fclose(f);
                 exit(1);
             }
 
             if (isalpha(input[0]) == 0)
             {
                 printf("WRONG FORMAT OF FLAG >>> %s\n", input);
+                fclose(f);
                 exit(1);                
             }
             for (int j = 0; j < i; j++)
@@ -329,6 +332,7 @@ int convert_line(char *input, Instruction *line)
                 if (isalpha(input[j]) == 0 && isdigit(input[j]) == 0 && input[j] != '_')
                 {
                 printf("WRONG FORMAT OF FLAG >>> %s\n", input);
+                fclose(f);
                 exit(1);                                 
                 }
             }
@@ -369,6 +373,7 @@ int convert_line(char *input, Instruction *line)
     {
         freeLine(line);
         printf("NO OPERATION >>> %s\n", input);
+        fclose(f);
         exit(1);
     }
     line->operation = malloc((i-tick+1) * sizeof(char)); // Add /0
@@ -392,6 +397,7 @@ int convert_line(char *input, Instruction *line)
             {
                 freeLine(line);
                 printf("COMPILE ERROR >>>>%s\n", input);
+                fclose(f);
                 exit(1);
             }
         }
