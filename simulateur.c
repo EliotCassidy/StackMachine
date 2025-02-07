@@ -477,30 +477,72 @@ void op(int i)
             break;
         case 6:
             SP--;
-            STACK[SP-1] = STACK[SP-1] | STACK[SP];
+            if (abs(STACK[SP-1] | STACK[SP]) > 32767)
+            {
+                printf("WARING >>> operation produces a value that is not representable in 16 bits\n");
+                STACK[SP-1] = (short) (STACK[SP-1] | STACK[SP]);
+            }
+            else {
+                STACK[SP-1] = (STACK[SP-1] | STACK[SP]);
+            }
             break;
         case 7:
             SP--;
-            STACK[SP-1] = STACK[SP-1] ^ STACK[SP];
+            if (abs(STACK[SP-1] ^ STACK[SP]) > 32767)
+            {
+                printf("WARING >>> operation produces a value that is not representable in 16 bits\n");
+                STACK[SP-1] = (short) (STACK[SP-1] ^ STACK[SP]);
+            }
+            else {
+                STACK[SP-1] = (STACK[SP-1] ^ STACK[SP]);
+            }
             break;
         case 8:
             SP--;
-            STACK[SP-1] = STACK[SP-1] & STACK[SP];
+            if (abs(STACK[SP-1] & STACK[SP]) > 32767)
+            {
+                printf("WARING >>> operation produces a value that is not representable in 16 bits\n");
+                STACK[SP-1] = (short) (STACK[SP-1] & STACK[SP]);
+            }
+            else {
+                STACK[SP-1] = (STACK[SP-1] & STACK[SP]);
+            }
             break;
         case 9:
             STACK[SP-1] =~ STACK[SP-1];
             break;
         case 10:
             SP--;
-            STACK[SP-1] = STACK[SP-1] + STACK[SP];
+            if (abs(STACK[SP-1] + STACK[SP]) > 32767)
+            {
+                printf("WARING >>> operation produces a value that is not representable in 16 bits\n");
+                STACK[SP-1] = (short) (STACK[SP-1] + STACK[SP]);
+            }
+            else {
+                STACK[SP-1] = (STACK[SP-1] + STACK[SP]);
+            }
             break;
         case 11:
             SP--;
-            STACK[SP-1] = STACK[SP-1] - STACK[SP];
+            if (abs(STACK[SP-1] - STACK[SP]) > 32767)
+            {
+                printf("WARING >>> operation produces a value that is not representable in 16 bits\n");
+                STACK[SP-1] = (short) (STACK[SP-1] - STACK[SP]);
+            }
+            else {
+                STACK[SP-1] = (STACK[SP-1] - STACK[SP]);
+            }
             break;
         case 12:
             SP--;
-            STACK[SP-1] = STACK[SP-1] * STACK[SP];
+            if (abs(STACK[SP-1] * STACK[SP]) > 32767)
+            {
+                printf("WARING >>> operation produces a value that is not representable in 16 bits\n");
+                STACK[SP-1] = (short) (STACK[SP-1] * STACK[SP]);
+            }
+            else {
+                STACK[SP-1] = (STACK[SP-1] * STACK[SP]);
+            }
             break;
         case 13:
             if (STACK[SP] == 0) {
@@ -563,10 +605,10 @@ void pushval(int i)
         printf("SP overflow\n");
         exit(1);
     }
-    if (i > 32767)
+    if (abs(i) > 32767)
     {
-        printf("Memory overflow\n");
-        exit(1);
+        printf("WARNING >>> push# %d has an argument that is not representable on 16 bits\n", i);
+        i = (short) i;
     }
     STACK[SP] = i;
     SP++;
@@ -634,19 +676,28 @@ void read(int x)
 {
     int i = 0;
     scanf("%d", &i);
-    if (x >= MEMORY)
+    if (x >= MEMORY || x < -1)
     {
         printf("Stack overflow\n");
         exit(1);
     }
-    if (i > 32767)
+    if (abs(i) > 32767)
     {
-        printf("Memory overflow\n");
-        exit(1);
+        printf("WARNING >>> read has got an argument that is not representable on 16 bits : %d\n", i);
+        i = (short) i;
     }
     
-    if (x)
-    STACK[x] = i;
+    if (x == -1) {
+        if (SP >= MEMORY) {
+            printf("Stack overflow\n");
+            exit(1);
+        }
+        STACK[SP] = i;
+        SP++;
+    }
+    else {
+        STACK[x] = i;
+    }
 }
 
 void write(int x)
@@ -681,10 +732,10 @@ void rnd(int x)
     srand(time(NULL) + seed);
     seed += 1;
     int r = rand() % x;
-    if (r > 32767)
+    if (abs(r) > 32767)
     {
-        printf("Memory overflow\n");
-        exit(1);
+        printf("WARNING >>> rnd hgenerated a number that is not representable on 16 bits : %d\n", r);
+        r = (short) r;
     }
     if (SP >= MEMORY)
     {
