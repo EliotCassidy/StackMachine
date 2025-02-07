@@ -116,16 +116,16 @@ int main(int argc, char** argv)
     }
     fclose(input);
 
-    FILE *output;
-    output = fopen("hexa.txt", "w");
+    FILE *output = fopen("hexa.txt", "w");
 
     for (int i=0; i<nb_line; i++)
     {
         char *converted_op = get_code(instructions[i].operation);
         if (strcmp(converted_op, "10") == 0)
         {
-            freeAll(instructions, nb_line);
             printf("OPERATION ERROR >>> %s is not an operation at line %d\n", instructions[i].operation, i+1);
+            freeAll(instructions, nb_line);
+            fclose(output);
             remove("hexa.txt");
             exit(1);
         }
@@ -135,8 +135,9 @@ int main(int argc, char** argv)
         if (instructions[i].data != NULL)
         {
             if (is_data) {
-                freeAll(instructions, nb_line);
                 printf("DATA ERROR >>> %s does not take an argument at line %d\n", instructions[i].operation, i+1);
+                freeAll(instructions, nb_line);
+                fclose(output);
                 remove("hexa.txt");
                 exit(1);
             } 
@@ -147,6 +148,7 @@ int main(int argc, char** argv)
                 {
                     freeAll(instructions, nb_line);
                     printf("FLAG ERROR >>> %s is not a flag at line %d\n", instructions[i].data, i+1);
+                    fclose(output);
                     remove("hexa.txt");
                     exit(1);
                 }
@@ -155,6 +157,7 @@ int main(int argc, char** argv)
                 {
                     freeAll(instructions, nb_line);
                     printf("MEMORY ERROR >>> %s is too big at line %d\n", instructions[i].data, i+1);
+                    fclose(output);
                     remove("hexa.txt");
                     exit(1);
                 }
@@ -173,6 +176,7 @@ int main(int argc, char** argv)
             if (!is_data) {
                 freeAll(instructions, nb_line);
                 printf("DATA ERROR >>> %s takes an argument at line %d\n", instructions[i].operation, i+1);
+                fclose(output);
                 remove("hexa.txt");
                 exit(1);
             }
