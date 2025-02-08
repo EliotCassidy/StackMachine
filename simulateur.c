@@ -36,7 +36,7 @@ typedef struct {
 
 
 char* get_code(const char *operation);
-int convert_line(char *input, Instruction *line, FILE *f);
+int convert_line(char *input, Instruction *line, FILE *f, Instruction *instructions, int nb_line);
 int isFlag(const char *data, const Flag *flags, const int nb_flags);
 int isAllDigits(const char *str);
 void freeLine(Instruction *line);
@@ -96,7 +96,7 @@ int main(int argc, char** argv)
 
     while (fgets(input_line, MAX_LINE, input)) {
         Instruction instruct = {NULL, NULL, NULL};
-        int is_empty = convert_line(input_line, &instruct, input);
+        int is_empty = convert_line(input_line, &instruct, input, instructions, nb_line);
         if (is_empty == 0)
         {
             instructions[nb_line] = instruct;
@@ -267,7 +267,7 @@ char* get_code(const char *operation)
 }
 
 // FLAG: Operation #VAL
-int convert_line(char *input, Instruction *line, FILE *f)
+int convert_line(char *input, Instruction *line, FILE *f, Instruction *instructions, int nb_line)
 {
     // Check if comments
     for (int i = 0, n = strlen(input); i < n; i++)
@@ -367,6 +367,7 @@ int convert_line(char *input, Instruction *line, FILE *f)
     if (tick == i)
     {
         freeLine(line);
+        freeAll(instructions, nb_line);
         printf("NO OPERATION >>> %s\n", input);
         fclose(f);
         exit(1);
@@ -391,6 +392,7 @@ int convert_line(char *input, Instruction *line, FILE *f)
             if (input[k] != '\0' && input[k] != '\t' && input[k] != ' ' && input[k] != '\n')
             {
                 freeLine(line);
+                freeAll(instructions, nb_line);
                 printf("COMPILE ERROR >>>>%s\n", input);
                 fclose(f);
                 exit(1);
