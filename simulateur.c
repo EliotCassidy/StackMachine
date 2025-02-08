@@ -1,8 +1,3 @@
-// TODO : Free all VALGRIND
-// Put the compilation not in main but seperate function
-// Only print out error line
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
