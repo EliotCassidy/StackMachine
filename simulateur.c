@@ -93,7 +93,7 @@ int main(int argc, char** argv)
     int nb_flags = 0;
     Flag flags[MAX_LINE];
 
-
+    // First pass: Parse assembly code into instructions and collect labels
     while (fgets(input_line, MAX_LINE, input)) {
         Instruction instruct = {NULL, NULL, NULL};
         int is_empty = convert_line(input_line, &instruct, input, instructions, nb_line);
@@ -112,9 +112,10 @@ int main(int argc, char** argv)
     fclose(input);
 
     FILE *output = fopen("hexa.txt", "w");
-
+    // Second pass: Convert instructions to machine code
     for (int i=0; i<nb_line; i++)
     {
+        // Convert operation to hex code
         char *converted_op = get_code(instructions[i].operation);
         if (strcmp(converted_op, "10") == 0)
         {
@@ -126,7 +127,10 @@ int main(int argc, char** argv)
         }
         fprintf(output, "%s", converted_op);
 
+        // Check if operation expects data
         int is_data = strcmp(converted_op, "01") == 0 || strcmp(converted_op, "03") == 0 || strcmp(converted_op, "08") == 0 || strcmp(converted_op, "0d") == 0 || strcmp(converted_op, "0e") == 0 || strcmp(converted_op, "63" ) == 0;
+        
+        // Process instruction data (if any)
         if (instructions[i].data != NULL)
         {
             if (is_data) {
@@ -148,16 +152,18 @@ int main(int argc, char** argv)
                     exit(1);
                 }
 
-                if (abs(atoi(instructions[i].data)) > MEMORY)
+                if (atoi(instructions[i].data) > 32767 || atoi(instructions[i].data) < -32768)
                 {
-                    printf("MEMORY ERROR >>> %s is too big at line %d\n", instructions[i].data, i+1);
-                    freeAll(instructions, nb_line);
-                    fclose(output);
-                    remove("hexa.txt");
-                    exit(1);
+                    printf("WARING >>> operation produces a value that is not representable in 16 bits\n");
+                    int signed_number = (short) atoi(instructions[i].data);
+                    unsigned short masked_number = (signed_number) & 0xFFFF;
+                    fprintf(output, " %04x\n", masked_number);
                 }
-                unsigned short masked_number = (atoi(instructions[i].data) & 0xFFFF);
-                fprintf(output, " %04x\n", masked_number);
+                else {
+                    unsigned short masked_number = (atoi(instructions[i].data) & 0xFFFF);
+                    fprintf(output, " %04x\n", masked_number);
+                }
+
             }
             else
             {
@@ -190,6 +196,7 @@ int main(int argc, char** argv)
     fclose(output);
     freeAll(instructions, nb_line);
 
+    // Third pass: Read the machine code and put in list
     FILE *machine_code = fopen("hexa.txt", "r");
     if (machine_code == NULL)
     {
@@ -201,10 +208,13 @@ int main(int argc, char** argv)
     int nb_execute = 0;
     Execute execute_list[MAX_LINE];
 
+    // Map operation codes to their corresponding functions
     void (*functions[16])(int) = { pop, ipop, push, ipush, pushval, jmp, jnz, call, ret, read, write, op, rnd, dup, deb, halt};
 
+    // Load machine code into executable format
     while (fgets(execute_line, MAX_LINE, machine_code)) {
         Execute execute;
+        // Extract operation code (first 2 hex digits)
         char op[3];
         strncpy(op, execute_line, 2);
         op[2] = '\0';
@@ -221,6 +231,7 @@ int main(int argc, char** argv)
         }
         execute.func = functions[value]; 
 
+        // Extract data value (next 4 hex digits)
         char data[5];
         strncpy(data, &execute_line[3], 4);
         data[4] = '\0';
@@ -234,6 +245,7 @@ int main(int argc, char** argv)
     Execute null_execute = {0, NULL};
     execute_list[nb_execute] = null_execute;
 
+    // Execute instructions until program end
     while (execute_list[PC].func != NULL)
     {
         Execute exe = execute_list[PC];
@@ -250,7 +262,7 @@ int is_integer(const char *str) {
     char *endptr;
     strtol(str, &endptr, 10);
 
-    // Ensure the entire string was a valid integer (no leftovers)
+    // Ensure the entire string was a valid integer
     return *endptr == '\0';
 }
 
@@ -266,7 +278,7 @@ char* get_code(const char *operation)
     return "10"; // Error handling
 }
 
-// FLAG: Operation #VAL
+// FLAG: Operation #VAL     ; Comment
 int convert_line(char *input, Instruction *line, FILE *f, Instruction *instructions, int nb_line)
 {
     // Check if comments
@@ -774,7 +786,7 @@ void ipop(int i)
 {
     if (SP <= 1 || STACK[SP-1]>= MEMORY)
     {
-        printf("Memory overflow\n");
+        printf("Memory error\n");
         exit(1);
     }
     STACK[STACK[SP-1]] = STACK[SP-2];

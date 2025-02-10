@@ -1,5 +1,4 @@
-; Program to ask the size of a random list to the user and sort it
-
+; Program that asks an int N to the user and shows N random numbers
 read 1000 ;
 push 1000 ; [n]
 
