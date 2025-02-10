@@ -1,9 +1,8 @@
-; Program that asks an int N to the user and shows N random numbers
+; Programme qui demande la taille d'une liste aleatoire a l'utilisateur et l'affiche
+
 read 1000 ;
 push 1000 ; [n]
-
-push# 0  ; [n, i]
-
+push# 0 ; [n, i]
 push# -1
 
 populate:   rnd 10          ; [n, i, x1]                     
@@ -16,6 +15,4 @@ populate:   rnd 10          ; [n, i, x1]
             push 0          ; [n, i+1, x1, i+1, n]          
             op 1            ; [n, i+1, x1, i+1 != n ? 1 : 0]
             jnz populate
-
-
 halt
